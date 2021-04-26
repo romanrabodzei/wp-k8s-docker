@@ -8,7 +8,6 @@ variables:
   tag: '$(Build.BuildId)'
   containerRegistry: 'containerRegistry'
 
-
 stages:
 - stage: Build
   displayName: Build and push stage
@@ -36,3 +35,4 @@ stages:
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: 'docker build -f Dockerfile -t $(containerRegistry).azurecr.io/$(imageRepository):$(tag) .'
+
