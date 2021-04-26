@@ -19,6 +19,7 @@ stages:
 
     - task: AzureCLI@2
       displayName: Az login
+      name: acr_name
       inputs:
         azureSubscription: $(azureSubscription)
         scriptType: 'pscore'
@@ -26,14 +27,15 @@ stages:
         inlineScript: |
           $query="[?ends_with(name, 'sbx')].loginServer" 
           $containerRegistry = az acr list --query $query --output tsv
-          echo $containerRegistry
+          echo "##vso[task.setvariable variable=containerRegistry]$containerRegistry"
 
     - task: AzureCLI@2
       displayName: Build docker image
+      name: docker_build
       inputs:
         azureSubscription: $(azureSubscription)
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo $containerRegistry
-          docker build -f Dockerfile -t $containerRegistry/$(imageRepository):$(tag) .
+          echo $(containerRegistry)
+          docker build -f Dockerfile -t $(containerRegistry)/$(imageRepository):$(tag) .
