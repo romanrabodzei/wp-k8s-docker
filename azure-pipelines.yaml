@@ -6,7 +6,6 @@ variables:
   vmImageName: 'ubuntu-latest'
   imageRepository: 'Wordpress'
   tag: '$(Build.BuildId)'
-  containerRegistry: 'containerRegistry'
 
 stages:
 - stage: Build
@@ -26,7 +25,7 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           $query="[?ends_with(name, 'sbx')].loginServer" 
-          $(containerRegistry) = az acr list --query $query --output tsv
+          $containerRegistry = az acr list --query $query --output tsv
 
     - task: AzureCLI@2
       displayName: Build docker image
@@ -34,5 +33,4 @@ stages:
         azureSubscription: $(azureSubscription)
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'docker build -f Dockerfile -t $(containerRegistry).azurecr.io/$(imageRepository):$(tag) .'
-
+        inlineScript: 'docker build -f Dockerfile -t $containerRegistry.azurecr.io/$(imageRepository):$(tag) .'
