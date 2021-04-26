@@ -1,3 +1,15 @@
+parameters:
+- name: environmentName
+  displayName: Environment Name
+  type: string
+  default: sbx
+  values:
+  - sbx
+  - dev
+  - tst
+  - uat
+  - prd
+
 trigger:
 - main
 
@@ -5,6 +17,8 @@ variables:
   imageRepository: 'Wordpress'
   tag: '$(Build.BuildId)'
   vmImageName: 'ubuntu-latest'
+  azureSubscription: 'VisualStudio'
+  environmentName: $[lower('${{ parameters.environmentName }}')]
 
 stages:
 - stage: Build
@@ -17,8 +31,19 @@ stages:
     steps:
 
     - task: AzureCLI@2
+      displayName: Az login
       inputs:
-        azureSubscription: 'VisualStudio'
+        azureSubscription: $(azureSubscription)
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          $query="[?ends_with(name, '$(environmentName)')].loginServer" 
+          $containerRegistry = az acr list --query $query --output tsv
+
+    - task: AzureCLI@2
+      displayName: Build docker image
+      inputs:
+        azureSubscription: $(azureSubscription)
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: 'docker build -f Dockerfile -t $(containerRegistry).azurecr.io/$(imageRepository):$(tag) .'
