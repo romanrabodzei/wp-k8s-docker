@@ -26,6 +26,7 @@ stages:
         inlineScript: |
           $query="[?ends_with(name, 'sbx')].loginServer" 
           $containerRegistry = az acr list --query $query --output tsv
+          echo $containerRegistry
 
     - task: AzureCLI@2
       displayName: Build docker image
@@ -33,4 +34,6 @@ stages:
         azureSubscription: $(azureSubscription)
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'docker build -f Dockerfile -t $containerRegistry.azurecr.io/$(imageRepository):$(tag) .'
+        inlineScript: |
+          echo $containerRegistry
+          docker build -f Dockerfile -t $containerRegistry/$(imageRepository):$(tag) .
