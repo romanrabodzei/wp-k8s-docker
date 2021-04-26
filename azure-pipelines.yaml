@@ -4,7 +4,7 @@ trigger:
 variables:
   azureSubscription: 'VisualStudio'
   vmImageName: 'ubuntu-latest'
-  imageRepository: 'Wordpress'
+  imageRepository: 'wordpress'
   tag: '$(Build.BuildId)'
 
 stages:
