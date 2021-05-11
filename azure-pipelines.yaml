@@ -15,7 +15,7 @@ pool:
 
 steps:
   - task: AzureCLI@2
-    displayName: Get ACR Name
+    displayName: Get ACR name
     inputs:
       azureSubscription: $(subscription)
       scriptType: 'pscore'
