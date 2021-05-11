@@ -24,7 +24,7 @@ stages:
       displayName: Container Name
       inputs:
         azureSubscription: $(subscription)
-        scriptType: 'bash'
+        scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: |
           $query="[?ends_with(name, 'dev')].loginServer" 
@@ -35,9 +35,9 @@ stages:
       displayName: Build Docker Image
       inputs:
         azureSubscription: $(subscription)
-        scriptType: 'bash'
+        scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: "docker build -f Dockerfile -t $(containerRegistry)/$(imageRepository):$(tag) ."
+        inlineScript: "docker build -f Dockerfile -t $(containerRegistry)/$(imageRepository):v$(tag) ."
     
   - job: Push
     displayName: Push
@@ -47,7 +47,7 @@ stages:
       displayName: Login to ACR
       inputs:
         azureSubscription: $(subscription)
-        scriptType: 'bash'
+        scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: | 
           $ip_address = curl http://ipv4.icanhazip.com
