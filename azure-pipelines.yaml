@@ -64,5 +64,8 @@ steps:
       azureSubscription: $(subscription)
       scriptType: 'pscore'
       scriptLocation: 'inlineScript'
-      inlineScript: | 
+      inlineScript: |
+        $ip_address = curl http://ipv4.icanhazip.com
+        $query="[?ends_with(name, 'dev')].name"
+        $registry = az acr list --query $query --output tsv
         az acr network-rule remove --name $registry --ip-address $ip_address
