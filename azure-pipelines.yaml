@@ -15,7 +15,7 @@ pool:
 
 steps:
   - task: AzureCLI@2
-    displayName: Registry Name
+    displayName: Get ACR Name
     inputs:
       azureSubscription: $(subscription)
       scriptType: 'pscore'
@@ -50,7 +50,7 @@ steps:
         docker login $containerRegistry --username $registry --password $password
 
   - task: AzureCLI@2
-    displayName: Push container
+    displayName: Push Docker Image
     inputs:
       azureSubscription: $(subscription)
       scriptType: 'pscore'
