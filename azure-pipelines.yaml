@@ -57,3 +57,12 @@ steps:
       scriptLocation: 'inlineScript'
       inlineScript: | 
         docker push $(containerRegistry)/$(imageRepository):v$(tag)
+
+  - task: AzureCLI@2
+    displayName: Clean-up
+    inputs:
+      azureSubscription: $(subscription)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: | 
+        az acr network-rule remove --name $registry --ip-address $ip_address
