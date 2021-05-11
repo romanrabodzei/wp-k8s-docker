@@ -2,40 +2,59 @@ trigger:
 - main
 
 variables:
-  azureSubscription: 'VisualStudio'
-  vmImageName: 'ubuntu-latest'
-  imageRepository: 'wordpress'
-  tag: '$(Build.BuildId)'
+- name: subscription
+  value: 'AzureCloud'
+- name: imageRepository
+  value: 'wordpress'
+- name: tag
+  value: '$(Build.BuildId)'
+
+pool:
+    vmImage: ubuntu-latest
 
 stages:
-- stage: Build
-  displayName: Build and push stage
+- stage: Create
+  displayName: Build and Push Docker Image
   jobs:
   - job: Build
     displayName: Build
-    pool:
-      vmImage: $(vmImageName)
     steps:
 
     - task: AzureCLI@2
-      displayName: Az login
-      name: acr_name
+      displayName: Container Name
       inputs:
-        azureSubscription: $(azureSubscription)
-        scriptType: 'pscore'
+        azureSubscription: $(subscription)
+        scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          $query="[?ends_with(name, 'sbx')].loginServer" 
+          $query="[?ends_with(name, 'dev')].loginServer" 
           $containerRegistry = az acr list --query $query --output tsv
           echo "##vso[task.setvariable variable=containerRegistry]$containerRegistry"
 
     - task: AzureCLI@2
-      displayName: Build docker image
-      name: docker_build
+      displayName: Build Docker Image
       inputs:
-        azureSubscription: $(azureSubscription)
-        scriptType: 'pscore'
+        azureSubscription: $(subscription)
+        scriptType: 'bash'
         scriptLocation: 'inlineScript'
-        inlineScript: |
-          echo $(containerRegistry)
-          docker build -f Dockerfile -t $(containerRegistry)/$(imageRepository):$(tag) .
+        inlineScript: "docker build -f Dockerfile -t $(containerRegistry)/$(imageRepository):$(tag) ."
+    
+  - job: Push
+    displayName: Push
+    steps:
+
+    - task: AzureCLI@2
+      displayName: Login to ACR
+      inputs:
+        azureSubscription: $(subscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: | 
+          $ip_address = curl http://ipv4.icanhazip.com
+          $query="[?ends_with(name, 'dev')].name"
+          $registry = az acr list --query $query --output tsv
+          az acr network-rule add --name $registry --ip-address $ip_address
+          $password = az acr credential show --name $registry --query passwords[0].value
+          $query="[?ends_with(name, 'dev')].loginServer" 
+          $containerRegistry = az acr list --query $query --output tsv
+          docker login $containerRegistry --username $registry --password $password
