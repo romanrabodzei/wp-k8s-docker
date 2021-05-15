@@ -108,4 +108,19 @@ stages:
                 $pipelineid = az pipelines list --project 'Wordpress-K8s' --query $query --output tsv --only-show-errors
   
                 Write-Host "Triggering pipeline to run..."
-                az pipelines build queue --definition-name 'K8s-Config' --project 'Wordpress-K8s' --only-show-errors --variables "image_tag=image_tag"
+                $variable=az pipelines variable list --pipeline-id $pipelineid --project 'Wordpress-K8s'
+                if($variable -eq $null) {
+                  az pipelines variable create --pipeline-id $pipelineid --project 'Wordpress-K8s' --name "image_tag" --value "$(tag)" --only-show-errors
+                  az pipelines build queue --definition-name 'K8s-Config' --project 'Wordpress-K8s' --only-show-errors
+                }
+                else{
+                  $query="image_tag.value"
+                  $variablevalue=az pipelines variable list --pipeline-id $pipelineid --project 'Wordpress-K8s' --query $query --output tsv --only-show-errors
+                  if($variablevalue -eq $(tag)) {
+                    az pipelines build queue --definition-name 'K8s-Config' --project 'Wordpress-K8s' --only-show-errors
+                  }
+                  else{
+                    az pipelines variable update --pipeline-id $pipelineid --project 'Wordpress-K8s' --name "image_tag" --value "$(tag)" --only-show-errors
+                    az pipelines build queue --definition-name 'K8s-Config' --project 'Wordpress-K8s' --only-show-errors
+                  }
+                }
