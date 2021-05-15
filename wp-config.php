@@ -24,18 +24,18 @@
 /** The name of the database for WordPress */
 
 $connectstr_dbhost = getenv('DATABASE_HOST');
-
+$connectstr_dbname = getenv('DATABASE_NAME');
 $connectstr_dbusername = getenv('DATABASE_USERNAME');
 $connectstr_dbpassword = getenv('DATABASE_PASSWORD');
 
 /** MySQL database name */
-define('DB_NAME', 'wordpressmysqldbdev');
+define('DB_NAME', $connectstr_dbname);
 
 /** MySQL database username */
 define('DB_USER', $connectstr_dbusername);
 
 /** MySQL database password */
-define('DB_PASSWORD',$connectstr_dbpassword);
+define('DB_PASSWORD', $connectstr_dbpassword);
 
 /** MySQL hostname */
 define('DB_HOST', $connectstr_dbhost);
