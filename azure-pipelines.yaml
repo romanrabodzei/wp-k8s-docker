@@ -1,111 +1,111 @@
 trigger:
-- main
-
+  - main
+  
 variables:
-- group: Variables
-- name: subscription
-  value: 'AzureCloud'
-- name: imageRepository
-  value: 'wordpress'
-- name: tag
-  value: '$(Build.BuildId)'
-- name: orgname
-  value: 'romanrabodzei'
-
+  - group: Variables
+  - name: subscription
+    value: 'AzureCloud'
+  - name: imageRepository
+    value: 'wordpress'
+  - name: tag
+    value: '$(Build.BuildId)'
+  - name: orgname
+    value: 'romanrabodzei'
+  
 stages:
-- stage: Build
-  jobs:
-    - job: Build
-      pool:
+  - stage: Build
+    jobs:
+      - job: Build
+        pool:
+            vmImage: ubuntu-latest
+        steps:
+          - task: AzureCLI@2
+            displayName: Get ACR name
+            inputs:
+              azureSubscription: $(subscription)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                $query="[?ends_with(name, 'dev')].loginServer" 
+                $containerRegistry = az acr list --query $query --output tsv
+                echo "##vso[task.setvariable variable=containerRegistry]$containerRegistry"
+  
+          - task: AzureCLI@2
+            displayName: Login to ACR
+            inputs:
+              azureSubscription: $(subscription)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: | 
+                $ip_address = curl http://ipv4.icanhazip.com
+                $query="[?ends_with(name, 'dev')].name"
+                $registry = az acr list --query $query --output tsv
+                az acr network-rule add --name $registry --ip-address $ip_address
+                $password = az acr credential show --name $registry --query passwords[0].value
+                $query="[?ends_with(name, 'dev')].loginServer" 
+                $containerRegistry = az acr list --query $query --output tsv
+                docker login $containerRegistry --username $registry --password $password
+  
+          - task: AzureCLI@2
+            displayName: Build Docker Image
+            inputs:
+              azureSubscription: $(subscription)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: "docker build -f Dockerfile -t $(containerRegistry)/$(imageRepository):v$(tag) ."
+  
+          - task: AzureCLI@2
+            displayName: Push Docker Image
+            inputs:
+              azureSubscription: $(subscription)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: | 
+                docker push $(containerRegistry)/$(imageRepository):v$(tag)
+  
+          - task: AzureCLI@2
+            displayName: Clean-up
+            inputs:
+              azureSubscription: $(subscription)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                $ip_address = curl http://ipv4.icanhazip.com
+                $query="[?ends_with(name, 'dev')].name"
+                $registry = az acr list --query $query --output tsv
+                az acr network-rule remove --name $registry --ip-address $ip_address
+  
+  - stage: Deploy
+    jobs:
+      - deployment: publishinternal
+        displayName: 'Approval'
+        environment: 'dev'
+      - job: Deploy
+        pool:
           vmImage: ubuntu-latest
-      steps:
-        - task: AzureCLI@2
-          displayName: Get ACR name
-          inputs:
-            azureSubscription: $(subscription)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              $query="[?ends_with(name, 'dev')].loginServer" 
-              $containerRegistry = az acr list --query $query --output tsv
-              echo "##vso[task.setvariable variable=containerRegistry]$containerRegistry"
-
-        - task: AzureCLI@2
-          displayName: Login to ACR
-          inputs:
-            azureSubscription: $(subscription)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: | 
-              $ip_address = curl http://ipv4.icanhazip.com
-              $query="[?ends_with(name, 'dev')].name"
-              $registry = az acr list --query $query --output tsv
-              az acr network-rule add --name $registry --ip-address $ip_address
-              $password = az acr credential show --name $registry --query passwords[0].value
-              $query="[?ends_with(name, 'dev')].loginServer" 
-              $containerRegistry = az acr list --query $query --output tsv
-              docker login $containerRegistry --username $registry --password $password
-
-        - task: AzureCLI@2
-          displayName: Build Docker Image
-          inputs:
-            azureSubscription: $(subscription)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: "docker build -f Dockerfile -t $(containerRegistry)/$(imageRepository):v$(tag) ."
-
-        - task: AzureCLI@2
-          displayName: Push Docker Image
-          inputs:
-            azureSubscription: $(subscription)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: | 
-              docker push $(containerRegistry)/$(imageRepository):v$(tag)
-
-        - task: AzureCLI@2
-          displayName: Clean-up
-          inputs:
-            azureSubscription: $(subscription)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              $ip_address = curl http://ipv4.icanhazip.com
-              $query="[?ends_with(name, 'dev')].name"
-              $registry = az acr list --query $query --output tsv
-              az acr network-rule remove --name $registry --ip-address $ip_address
-
-- stage: Deploy
-  jobs:
-    - deployment: publishinternal
-      displayName: 'Approval'
-      environment: 'dev'
-    - job: Deploy
-      pool:
-        vmImage: ubuntu-latest
-      steps:
-        - task: AzureCLI@2
-          displayName: Deployment
-          inputs:
-            azureSubscription: $(subscription)
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              # Login to Azure DevOps
-              Write-Output $(AZURE_DEVOPS_EXT_PAT) | az devops login --organization $(System.CollectionUri) --only-show-errors
-
-              # Adding AZ DevOps extension
-              $query = "[?contains(@.name, 'azure-devops')].name"
-              $extension = az extension list --query $query --output tsv
-              if($extension -eq $null) {
-                az extension add --name azure-devops
+        steps:
+          - task: AzureCLI@2
+            displayName: Deployment
+            inputs:
+              azureSubscription: $(subscription)
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                # Login to Azure DevOps
+                Write-Output $(AZURE_DEVOPS_EXT_PAT) | az devops login --organization $(System.CollectionUri) --only-show-errors
+  
+                # Adding AZ DevOps extension
+                $query = "[?contains(@.name, 'azure-devops')].name"
+                $extension = az extension list --query $query --output tsv
+                if($extension -eq $null) {
+                  az extension add --name azure-devops
+                  }
+                else {
+                Write-Host "Extension 'azure-devops' is already installed."
                 }
-              else {
-              Write-Host "Extension 'azure-devops' is already installed."
-              }
-              
-              $query = "[?contains(@.name, 'K8s-Config')].id"
-              $pipelineid = az pipelines list --project 'Wordpress-K8s' --query $query --output tsv --only-show-errors
-
-              Write-Host "Triggering pipeline to run..."
-              az pipelines build queue --definition-name 'K8s-Config' --project 'Wordpress-K8s' --only-show-errors --variables "image_tag=image_tag"
+                
+                $query = "[?contains(@.name, 'K8s-Config')].id"
+                $pipelineid = az pipelines list --project 'Wordpress-K8s' --query $query --output tsv --only-show-errors
+  
+                Write-Host "Triggering pipeline to run..."
+                az pipelines build queue --definition-name 'K8s-Config' --project 'Wordpress-K8s' --only-show-errors --variables "image_tag=image_tag"
